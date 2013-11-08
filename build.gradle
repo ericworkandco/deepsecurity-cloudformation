@@ -9,7 +9,7 @@ buildscript {
 }
 
 ext {
-	artifactId = 'cm-deepsecurity'
+	artifactId = 'deepsecurity-cloudformation'
 	templateBucket = 'cm-public-cfn-templates'
 }
 
