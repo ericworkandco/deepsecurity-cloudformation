@@ -48,7 +48,6 @@
     "VPCCIDR" : { "Type" : "String" },
     "VPCDefaultSecurityGroup" : { "Type" : "String" },
     "FrontendSubnet" : { "Type" : "String" },
-    "PowerUserProfile" : { "Type" : "String" },
     "SSHSecurityGroup" : { "Type" : "String" },
     "DBSubnetGroup" : { "Type" : "String" }
   },
@@ -133,7 +132,6 @@
         "SubnetId": { "Ref" : "FrontendSubnet" },
         "SourceDestCheck": "false",
         "ImageId":  { "Ref": "DSMInstanceImageId" },
-        "IamInstanceProfile": { "Ref" : "PowerUserProfile" },
         "SecurityGroupIds" : [
           { "Ref" : "DeepSecurityManagerSecurityGroup" },
           { "Ref" : "SSHSecurityGroup" }
