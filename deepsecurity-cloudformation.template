@@ -19,11 +19,10 @@
       "Type" : "String"
     },
     "EnvType" : {
-      "Description" : "Environment type.",
+      "Description" : "must specify prod or test. If you specify prod, RDS Oracle DB Instance create and use it.",
       "Default" : "test",
       "Type" : "String",
-      "AllowedValues" : ["prod", "test"],
-      "ConstraintDescription" : "must specify prod or test. If you specify prod, RDS Oracle DB Instance create and use it."
+      "AllowedValues" : ["prod", "test"]
     },
     "AdminUsername" : {
       "Description" : "DSM Administrator username",
@@ -44,12 +43,31 @@
       "Type" : "String"
     },
 
-    "VPC" : { "Type" : "String" },
-    "VPCCIDR" : { "Type" : "String" },
-    "VPCDefaultSecurityGroup" : { "Type" : "String" },
-    "FrontendSubnet" : { "Type" : "String" },
-    "SSHSecurityGroup" : { "Type" : "String" },
-    "DBSubnetGroup" : { "Type" : "String" }
+    "VPC" : { 
+      "Description" : "VPC ID : vpc-XXXXXXXX",
+      "Type" : "String" 
+    },
+    "VPCCIDR" : { 
+      "Description" : "VPC CIDR Address : x.x.x.x/x",
+      "Type" : "String"
+    },
+    "VPCDefaultSecurityGroup" : { 
+      "Description" : "will apply to DSM Instance : sg-XXXXXXXX",
+      "Type" : "String" 
+    },
+    "FrontendSubnet" : { 
+      "Description" : "will deploy DSM Instance : subnet-XXXXXXXX",
+      "Type" : "String" 
+    },
+    "SSHSecurityGroup" : { 
+      "Description" : "will apply to DSM Instance : sg-XXXXXXXX",
+      "Type" : "String" 
+    },
+    "DBSubnetGroup" : { 
+      "Description" : "will apply to RDS DB instance",
+      "Type" : "String",
+      "ConstraintDescription" : "must specify if you specify prod environment."
+    }
   },
   "Mappings": {
     "StackConfig" : {
