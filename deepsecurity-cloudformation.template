@@ -18,22 +18,68 @@
       "Description" : "The AMI ID for Deep Security Manager Instance made by Packer : ami-XXXXXXXX",
       "Type" : "String"
     },
-    "VPC" : { "Type" : "String" },
-    "FrontendSubnet" : { "Type" : "String" },
-    "PowerUserProfile" : { "Type" : "String" },
-    "DBSubnetGroup" : { "Type" : "String" },
-    "VPCDefaultSecurityGroup" : { "Type" : "String" },
-    "SSHSecurityGroup" : { "Type" : "String" },
-    "VPCCIDR" : { "Type" : "String" }
+    "EnvType" : {
+      "Description" : "must specify prod or test. If you specify prod, RDS Oracle DB Instance create and use it.",
+      "Default" : "test",
+      "Type" : "String",
+      "AllowedValues" : ["prod", "test"]
+    },
+    "AdminUsername" : {
+      "Description" : "DSM Administrator username",
+      "Default" : "dsAdmin",
+      "Type" : "String"
+    },
+    "AdminPassword" : {
+      "Description" : "DSM Administrator password",
+      "Type" : "String"
+    },
+    "DBMasterUsername" : {
+      "Description" : "DSM DB master username",
+      "Default" : "dsAdmin",
+      "Type" : "String"
+    },
+    "DBMasterPassword" : {
+      "Description" : "DSM DB master password",
+      "Type" : "String"
+    },
+
+    "VPC" : { 
+      "Description" : "VPC ID : vpc-XXXXXXXX",
+      "Type" : "String" 
+    },
+    "VPCCIDR" : { 
+      "Description" : "VPC CIDR Address : x.x.x.x/x",
+      "Type" : "String"
+    },
+    "VPCDefaultSecurityGroup" : { 
+      "Description" : "will apply to DSM Instance : sg-XXXXXXXX",
+      "Type" : "String" 
+    },
+    "FrontendSubnet" : { 
+      "Description" : "will deploy DSM Instance : subnet-XXXXXXXX",
+      "Type" : "String" 
+    },
+    "SSHSecurityGroup" : { 
+      "Description" : "will apply to DSM Instance : sg-XXXXXXXX",
+      "Type" : "String" 
+    },
+    "DBSubnetGroup" : { 
+      "Description" : "will apply to RDS DB instance",
+      "Type" : "String",
+      "ConstraintDescription" : "must specify if you specify prod environment."
+    }
   },
   "Mappings": {
     "StackConfig" : {
       "DeepSecurityManagerServer" : { "InstanceType" : "m1.medium", "AllocatedStorage" : "20" },
-      "DeepSecurityManagerConfig" : { "AdminUsername" : "dsAdmin", "AdminPassword" : "dsAdmin!123" },
-      "DeepSecurityDBServer" : { "InstanceType" : "db.t1.micro", "AllocatedStorage" : "20"},
-      "DeepSecurityDBConfig" : { "DBUsername" : "dsAdmin", "DBPassword" : "dsPassword" }
+      "DeepSecurityDBServer"      : { "InstanceType" : "db.t1.micro", "AllocatedStorage" : "20"}
     }
   },
+
+  "Conditions" : {
+    "CreateProdResources" : {"Fn::Equals" : [{"Ref" : "EnvType"}, "prod"]}
+  },
+
   "Resources": {
     "DeepSecurityManagerSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
@@ -66,6 +112,7 @@
     },
     "OracleSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
+      "Condition" : "CreateProdResources",
       "Properties" : {
         "VpcId" : {"Ref" : "VPC"},
         "GroupDescription" : "Enable Oracle access via port 1521 from VPC",
@@ -103,7 +150,6 @@
         "SubnetId": { "Ref" : "FrontendSubnet" },
         "SourceDestCheck": "false",
         "ImageId":  { "Ref": "DSMInstanceImageId" },
-        "IamInstanceProfile": { "Ref" : "PowerUserProfile" },
         "SecurityGroupIds" : [
           { "Ref" : "DeepSecurityManagerSecurityGroup" },
           { "Ref" : "SSHSecurityGroup" }
@@ -125,14 +171,20 @@
           "echo '/dev/xvdf  swap      swap    defaults         0 0' >> /etc/fstab\n",
           "yum install -y wget unzip\n",
           "echo 'AddressAndPortsScreen.ManagerAddress=", { "Fn::Join" : [ "", ["ds.", {"Ref" : "HostedZone"}, "." ]]}, "' > dsm.properties\n",
-          "echo 'CredentialsScreen.Administrator.Username=", { "Fn::FindInMap" : [ "StackConfig", "DeepSecurityManagerConfig", "AdminUsername" ]}, "' >> dsm.properties\n",
-          "echo 'CredentialsScreen.Administrator.Password=", { "Fn::FindInMap" : [ "StackConfig", "DeepSecurityManagerConfig", "AdminPassword" ]}, "' >> dsm.properties\n",
-          "echo 'DatabaseScreen.DatabaseType=Oracle' >> dsm.properties\n",
-          "echo 'DatabaseScreen.Transport=TCP' >> dsm.properties\n",
-          "echo 'DatabaseScreen.Hostname=", { "Fn::GetAtt" : [ "DSMDBInstance", "Endpoint.Address" ] }, "' >> dsm.properties\n",
-          "echo 'DatabaseScreen.DatabaseName=ORCL' >> dsm.properties\n",
-          "echo 'DatabaseScreen.Username=", { "Fn::FindInMap" : [ "StackConfig", "DeepSecurityDBConfig", "DBUsername" ]}, "' >> dsm.properties\n",
-          "echo 'DatabaseScreen.Password=", { "Fn::FindInMap" : [ "StackConfig", "DeepSecurityDBConfig", "DBPassword" ]}, "' >> dsm.properties\n",
+          "echo 'CredentialsScreen.Administrator.Username=", { "Ref" : "AdminUsername" }, "' >> dsm.properties\n",
+          "echo 'CredentialsScreen.Administrator.Password=", { "Ref" : "AdminPassword" }, "' >> dsm.properties\n",
+          { "Fn::If" : [
+            "CreateProdResources",
+            { "Fn::Join" : [ "", [
+              "echo 'DatabaseScreen.DatabaseType=Oracle' >> dsm.properties\n",
+              "echo 'DatabaseScreen.Transport=TCP' >> dsm.properties\n",
+              "echo 'DatabaseScreen.Hostname=", { "Fn::GetAtt" : [ "DSMDBInstance", "Endpoint.Address" ] }, "' >> dsm.properties\n",
+              "echo 'DatabaseScreen.DatabaseName=ORCL' >> dsm.properties\n",
+              "echo 'DatabaseScreen.Username=", { "Ref" : "DBMasterUsername" }, "' >> dsm.properties\n",
+              "echo 'DatabaseScreen.Password=", { "Ref" : "DBMasterPassword" }, "' >> dsm.properties\n"
+            ]]},
+            ""
+          ]},
           "curl -OL http://www.trendmicro.com/ftp/jp/ucmodule/tmds/90SP1/DSM/Manager-Linux-9.0.5370.x64.zip\n",
           "unzip Manager-Linux-9.0.5370.x64.zip\n",
           "bash ./Manager-Linux-9.0.5370.x64.sh -q -console -varfile ./dsm.properties\n",
@@ -145,6 +197,7 @@
     },
     "DSMDBInstance" : {
       "Type" : "AWS::RDS::DBInstance",
+      "Condition" : "CreateProdResources",
       "DeletionPolicy" : "Snapshot",
       "Properties" : {
         "DBInstanceClass" : { "Fn::FindInMap" : [ "StackConfig", "DeepSecurityDBServer", "InstanceType" ]},
@@ -152,8 +205,8 @@
         "Engine" : "oracle-se1",
         "LicenseModel" : "license-included",
         "MultiAZ" : "true",
-        "MasterUsername" : { "Fn::FindInMap" : [ "StackConfig", "DeepSecurityDBConfig", "DBUsername" ]},
-        "MasterUserPassword" : { "Fn::FindInMap" : [ "StackConfig", "DeepSecurityDBConfig", "DBPassword" ]},
+        "MasterUsername" :     { "Ref" : "DBMasterUsername" },
+        "MasterUserPassword" : { "Ref" : "DBMasterPassword" },
         "BackupRetentionPeriod" : "35",
         "DBSubnetGroupName" : {"Ref":"DBSubnetGroup"},
         "PreferredBackupWindow": "19:30-20:00",
